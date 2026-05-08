@@ -712,29 +712,9 @@
         </div>
 
         <div class="ctrl-section" id="map-options-section">
-          <div class="ctrl-label">Map Options</div>
-          <div class="info-badge" style="margin-bottom: 12px; border: 1px solid var(--border2);">
-            Layer toggles require a Mapbox API token. Using OpenStreetMap fallback.
-          </div>
-          <div class="toggle-row" style="opacity: 0.5; pointer-events: none;">
-            <label>Show Buildings</label>
-            <label class="toggle"><input type="checkbox" id="tog-buildings" checked disabled><span class="slider-toggle"></span></label>
-          </div>
-          <div class="toggle-row" style="opacity: 0.5; pointer-events: none;">
-            <label>Show Roads</label>
-            <label class="toggle"><input type="checkbox" id="tog-roads" checked disabled><span class="slider-toggle"></span></label>
-          </div>
-          <div class="toggle-row" style="opacity: 0.5; pointer-events: none;">
-            <label>Show Water</label>
-            <label class="toggle"><input type="checkbox" id="tog-water" checked disabled><span class="slider-toggle"></span></label>
-          </div>
-          <div class="toggle-row" style="opacity: 0.5; pointer-events: none;">
-            <label>Show Parks</label>
-            <label class="toggle"><input type="checkbox" id="tog-parks" checked disabled><span class="slider-toggle"></span></label>
-          </div>
-          <div class="toggle-row" style="opacity: 0.5; pointer-events: none;">
-            <label>Show Labels</label>
-            <label class="toggle"><input type="checkbox" id="tog-labels" checked disabled><span class="slider-toggle"></span></label>
+          <div class="ctrl-label">Map Attribution</div>
+          <div class="info-badge">
+            Using OpenStreetMap tiles. Styling is limited to color tinting in raster mode.
           </div>
         </div>
 
@@ -778,37 +758,16 @@
           <div class="ctrl-label">Custom Colors</div>
           <div class="palette-grid">
             <div class="palette-item">
-              <span>Background</span>
+              <span>Map Color</span>
               <input type="color" id="col-bg" value="#1a1a2e" oninput="applyCustomColors()" />
             </div>
             <div class="palette-item">
-              <span>Water</span>
-              <input type="color" id="col-water" value="#16213e" oninput="applyCustomColors()" />
+              <span>Text Color</span>
+              <input type="color" id="col-labels" value="#ffffff" oninput="updateCustomTextColor(this.value)" />
             </div>
-            <div class="palette-item">
-              <span>Roads</span>
-              <input type="color" id="col-roads" value="#2a2a4a" oninput="applyCustomColors()" />
-            </div>
-            <div class="palette-item">
-              <span>Buildings</span>
-              <input type="color" id="col-buildings" value="#1f3a5f" oninput="applyCustomColors()" />
-            </div>
-            <div class="palette-item">
-              <span>Parks</span>
-              <input type="color" id="col-parks" value="#1a3a2a" oninput="applyCustomColors()" />
-            </div>
-            <div class="palette-item">
-              <span>Labels</span>
-              <input type="color" id="col-labels" value="#4a90d9" oninput="applyCustomColors()" />
-            </div>
-            <div class="palette-item">
-              <span>Major Roads</span>
-              <input type="color" id="col-roads-major" value="#3a3a6a" oninput="applyCustomColors()" />
-            </div>
-            <div class="palette-item">
-              <span>Land</span>
-              <input type="color" id="col-land" value="#121212" oninput="applyCustomColors()" />
-            </div>
+          </div>
+          <div class="info-badge" style="margin-top: 10px;">
+            Map color tints the tiles. Text color applies to subtitles and coordinates.
           </div>
         </div>
 
@@ -1038,52 +997,33 @@ let selectedTextId = null;
 let textBlocks = [];
 let textIdCounter = 0;
 let currentPreset = 'midnight';
-let layersVisible = { buildings: true, roads: true, water: true, parks: true, labels: true };
 let currentLng = 0, currentLat = 51.5, currentZoom = 12;
 
 // ── STYLE PRESETS ──────────────────────────────────
 const PRESETS = {
   midnight: {
     name: 'Midnight', emoji: '🌃',
-    bg: '#0d0e17', water: '#131b2e', roads: '#1a1f35',
-    roadsMajor: '#22284a', buildings: '#151c33', parks: '#0d1a17',
-    labels: '#3d5a8a', land: '#0d0e17',
-    posterBgTop: '#060607', posterBgBot: '#060607', labelColor: '#ffffff'
+    bg: '#0d0e17', posterBgTop: '#0d0e17', posterBgBot: '#0d0e17', labelColor: '#ffffff'
   },
   ivory: {
     name: 'Ivory', emoji: '🌿',
-    bg: '#f5f0e8', water: '#c8dde8', roads: '#d9d0c0',
-    roadsMajor: '#b8a888', buildings: '#e0d8c8', parks: '#d0e8d0',
-    labels: '#4a6a4a', land: '#f5f0e8',
-    posterBgTop: '#f0ebe0', posterBgBot: '#e8e0d0', labelColor: '#1a1a1a'
+    bg: '#f5f0e8', posterBgTop: '#f5f0e8', posterBgBot: '#e8e0d0', labelColor: '#2a2a2a'
   },
   blueprint: {
     name: 'Blueprint', emoji: '📐',
-    bg: '#0a1628', water: '#0d1f3c', roads: '#1a2d50',
-    roadsMajor: '#243c66', buildings: '#0f2040', parks: '#0d2035',
-    labels: '#4a8ab5', land: '#0a1628',
-    posterBgTop: '#060d18', posterBgBot: '#060d18', labelColor: '#7ab5d9'
+    bg: '#0a1628', posterBgTop: '#0a1628', posterBgBot: '#0a1628', labelColor: '#7ab5d9'
   },
   desert: {
     name: 'Desert', emoji: '🏜',
-    bg: '#e8d5b0', water: '#b5c8d0', roads: '#c8b898',
-    roadsMajor: '#b8a078', buildings: '#d0c0a0', parks: '#c8c8a0',
-    labels: '#8b4513', land: '#e8d5b0',
-    posterBgTop: '#d4c090', posterBgBot: '#c8b080', labelColor: '#3a1a0a'
+    bg: '#e8d5b0', posterBgTop: '#e8d5b0', posterBgBot: '#d4c090', labelColor: '#3a1a0a'
   },
   neon: {
     name: 'Neon', emoji: '🌆',
-    bg: '#0a0010', water: '#0a0025', roads: '#150030',
-    roadsMajor: '#1a0040', buildings: '#100020', parks: '#001010',
-    labels: '#ff00ff', land: '#0a0010',
-    posterBgTop: '#050008', posterBgBot: '#050008', labelColor: '#00ffff'
+    bg: '#0a0010', posterBgTop: '#0a0010', posterBgBot: '#050008', labelColor: '#00ffff'
   },
   paper: {
     name: 'Paper', emoji: '📜',
-    bg: '#f4ead0', water: '#b8ccd8', roads: '#d8c8a8',
-    roadsMajor: '#c8b090', buildings: '#e0d0b8', parks: '#c8d8b8',
-    labels: '#6b5a40', land: '#f4ead0',
-    posterBgTop: '#ece0c8', posterBgBot: '#e0d4b8', labelColor: '#2a1a0a'
+    bg: '#f4ead0', posterBgTop: '#ece0c8', posterBgBot: '#e0d4b8', labelColor: '#4a3a2a'
   }
 };
 
@@ -1199,10 +1139,10 @@ function initPresetGrid() {
     card.className = 'preset-card' + (key === 'midnight' ? ' active' : '');
     card.id = 'preset-' + key;
     card.innerHTML = `
-      <div style="width:100%;height:100%;background:linear-gradient(135deg,${p.bg} 0%,${p.water} 100%);
+      <div style="width:100%;height:100%;background:${p.bg};
         display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
         <span style="font-size:22px">${p.emoji}</span>
-        <span style="font-family:var(--font-mono);font-size:8px;color:${p.labels};letter-spacing:1px;text-transform:uppercase">${p.name}</span>
+        <span style="font-family:var(--font-mono);font-size:8px;color:${p.labelColor};letter-spacing:1px;text-transform:uppercase">${p.name}</span>
       </div>
       <div class="preset-name">${p.name}</div>
     `;
@@ -1222,13 +1162,7 @@ function applyPreset(key) {
 
   // update color pickers
   document.getElementById('col-bg').value = p.bg;
-  document.getElementById('col-water').value = p.water;
-  document.getElementById('col-roads').value = p.roads;
-  document.getElementById('col-buildings').value = p.buildings;
-  document.getElementById('col-parks').value = p.parks;
-  document.getElementById('col-labels').value = p.labels;
-  document.getElementById('col-roads-major').value = p.roadsMajor;
-  document.getElementById('col-land').value = p.land;
+  if (document.getElementById('col-labels')) document.getElementById('col-labels').value = p.labelColor;
   document.getElementById('poster-bg-top').value = p.posterBgTop;
   document.getElementById('poster-bg-bot').value = p.posterBgBot;
 
@@ -1237,19 +1171,33 @@ function applyPreset(key) {
   refreshPosterTextColors(p.labelColor);
 }
 
+function updateCustomTextColor(color) {
+  refreshPosterTextColors(color);
+}
+
 function applyCustomColors() {
   if (!map) return;
 
-  // Since we are using raster tiles, we apply a CSS filter to the map element
-  // to approximate the theme colors. This "makes it work" without an API key.
   const bg = document.getElementById('col-bg').value;
   const hsl = hexToHsl(bg);
-
   const mapEl = document.getElementById('map');
-  // We use hue-rotate, saturate and brightness to tint the OSM tiles
-  // This is a common trick for "API-key-less" custom styled maps
-  mapEl.style.filter = `hue-rotate(${hsl.h}deg) saturate(${hsl.s}%) brightness(${hsl.l / 50})`;
-  mapEl.style.backgroundColor = bg;
+  const container = document.getElementById('map-container');
+
+  container.style.backgroundColor = bg;
+
+  let filter = '';
+  if (hsl.l < 50) {
+    // Dark theme: Invert -> Grayscale -> Brightness -> Contrast -> Sepia -> Hue Rotate -> Saturate
+    filter = `invert(1) grayscale(1) brightness(1.2) contrast(1.4) sepia(1) hue-rotate(${hsl.h - 30}deg) saturate(${hsl.s * 1.5}%)`;
+    mapEl.style.mixBlendMode = 'screen';
+  } else {
+    // Light theme: Grayscale -> Brightness -> Contrast -> Sepia -> Hue Rotate -> Saturate
+    filter = `grayscale(1) brightness(1.2) contrast(1.2) sepia(1) hue-rotate(${hsl.h - 30}deg) saturate(${hsl.s * 1.5}%)`;
+    mapEl.style.mixBlendMode = 'multiply';
+  }
+
+  mapEl.style.filter = filter;
+  mapEl.style.opacity = '0.9';
 }
 
 function hexToHsl(hex) {
@@ -1571,21 +1519,6 @@ function makeDraggable(el, block) {
 }
 
 /* ═══════════════════════════════════════════════════
-   LAYER TOGGLES
-═══════════════════════════════════════════════════ */
-
-function toggleLayer(layer) {
-  layersVisible[layer] = !layersVisible[layer];
-  applyLayerVisibility(layer, layersVisible[layer]);
-}
-
-function applyLayerVisibility(layerCategory, isVisible) {
-  // Raster tiles don't support per-layer visibility toggles easily
-  // We notify the user or just ignore for now to keep the app working
-  console.warn("Layer visibility toggles require a Mapbox API key for vector styles.");
-}
-
-/* ═══════════════════════════════════════════════════
    CANVAS SIZE
 ═══════════════════════════════════════════════════ */
 
@@ -1612,12 +1545,16 @@ function fitCanvasToArea() {
   const poster = document.getElementById('poster');
   const wrap = document.getElementById('poster-wrap');
 
+  if (!area || !poster || !wrap) return;
+
   // Use clientWidth/Height to exclude scrollbars if any
-  const areaW = area.clientWidth - 100;
-  const areaH = area.clientHeight - 100;
+  const areaW = Math.max(100, area.clientWidth - 80);
+  const areaH = Math.max(100, area.clientHeight - 80);
 
   const pW = poster.offsetWidth;
   const pH = poster.offsetHeight;
+
+  if (!pW || !pH) return;
 
   // Calculate scale to fit while maintaining aspect ratio
   const scale = Math.min(areaW / pW, areaH / pH, 1);
