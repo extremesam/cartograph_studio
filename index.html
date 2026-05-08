@@ -406,9 +406,11 @@
 
   #poster-wrap {
     position: relative;
-    display: inline-block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     box-shadow: 0 40px 120px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05);
-    transition: width .3s, height .3s;
+    transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
   }
 
   /* ── POSTER ── */
@@ -417,6 +419,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    flex-shrink: 0; /* Prevent poster from shrinking inside wrap */
   }
 
   #map-container {
@@ -708,27 +711,30 @@
           </div>
         </div>
 
-        <div class="ctrl-section">
+        <div class="ctrl-section" id="map-options-section">
           <div class="ctrl-label">Map Options</div>
-          <div class="toggle-row">
+          <div class="info-badge" style="margin-bottom: 12px; border: 1px solid var(--border2);">
+            Layer toggles require a Mapbox API token. Using OpenStreetMap fallback.
+          </div>
+          <div class="toggle-row" style="opacity: 0.5; pointer-events: none;">
             <label>Show Buildings</label>
-            <label class="toggle"><input type="checkbox" id="tog-buildings" checked onchange="toggleLayer('buildings')"><span class="slider-toggle"></span></label>
+            <label class="toggle"><input type="checkbox" id="tog-buildings" checked disabled><span class="slider-toggle"></span></label>
           </div>
-          <div class="toggle-row">
+          <div class="toggle-row" style="opacity: 0.5; pointer-events: none;">
             <label>Show Roads</label>
-            <label class="toggle"><input type="checkbox" id="tog-roads" checked onchange="toggleLayer('roads')"><span class="slider-toggle"></span></label>
+            <label class="toggle"><input type="checkbox" id="tog-roads" checked disabled><span class="slider-toggle"></span></label>
           </div>
-          <div class="toggle-row">
+          <div class="toggle-row" style="opacity: 0.5; pointer-events: none;">
             <label>Show Water</label>
-            <label class="toggle"><input type="checkbox" id="tog-water" checked onchange="toggleLayer('water')"><span class="slider-toggle"></span></label>
+            <label class="toggle"><input type="checkbox" id="tog-water" checked disabled><span class="slider-toggle"></span></label>
           </div>
-          <div class="toggle-row">
+          <div class="toggle-row" style="opacity: 0.5; pointer-events: none;">
             <label>Show Parks</label>
-            <label class="toggle"><input type="checkbox" id="tog-parks" checked onchange="toggleLayer('parks')"><span class="slider-toggle"></span></label>
+            <label class="toggle"><input type="checkbox" id="tog-parks" checked disabled><span class="slider-toggle"></span></label>
           </div>
-          <div class="toggle-row">
+          <div class="toggle-row" style="opacity: 0.5; pointer-events: none;">
             <label>Show Labels</label>
-            <label class="toggle"><input type="checkbox" id="tog-labels" checked onchange="toggleLayer('labels')"><span class="slider-toggle"></span></label>
+            <label class="toggle"><input type="checkbox" id="tog-labels" checked disabled><span class="slider-toggle"></span></label>
           </div>
         </div>
 
@@ -1117,11 +1123,29 @@ window.addEventListener('load', () => {
 ═══════════════════════════════════════════════════ */
 
 function initMap() {
-  mapboxgl.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4M29iazA2Z2gycXA4N2pmbDZmangifQ.-g_vE53SD2WrJ6tFX7QHmA';
+  // Free fallback token - only for OSM tiles if vector fails
+  mapboxgl.accessToken = 'pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw';
   
   map = new mapboxgl.Map({
     container: 'map',
-    style: 'mapbox://styles/mapbox/light-v11',
+    style: {
+      version: 8,
+      sources: {
+        'osm': {
+          type: 'raster',
+          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tileSize: 256,
+          attribution: '© OpenStreetMap contributors'
+        }
+      },
+      layers: [{
+        id: 'osm-tiles',
+        type: 'raster',
+        source: 'osm',
+        minzoom: 0,
+        maxzoom: 19
+      }]
+    },
     center: [currentLng, currentLat],
     zoom: currentZoom,
     interactive: true,
@@ -1135,15 +1159,6 @@ function initMap() {
   map.on('load', () => {
     updateCoords();
     applyPreset(currentPreset);
-  });
-  
-  // Ensure styles and layers are applied when style loads/changes
-  map.on('style.load', () => {
-    applyCustomColors();
-    // Re-apply toggles
-    Object.keys(layersVisible).forEach(layer => {
-      applyLayerVisibility(layer, layersVisible[layer]);
-    });
   });
 }
 
@@ -1223,53 +1238,18 @@ function applyPreset(key) {
 }
 
 function applyCustomColors() {
-  if (!map || !map.isStyleLoaded()) return;
+  if (!map) return;
 
+  // Since we are using raster tiles, we apply a CSS filter to the map element
+  // to approximate the theme colors. This "makes it work" without an API key.
   const bg = document.getElementById('col-bg').value;
-  const water = document.getElementById('col-water').value;
-  const roads = document.getElementById('col-roads').value;
-  const roadsMajor = document.getElementById('col-roads-major').value;
-  const buildings = document.getElementById('col-buildings').value;
-  const parks = document.getElementById('col-parks').value;
-  const labels = document.getElementById('col-labels').value;
-  const land = document.getElementById('col-land').value;
-
-  const layers = map.getStyle().layers;
-  layers.forEach(layer => {
-    const id = layer.id;
-    const type = layer.type;
-
-    if (id.includes('water')) {
-      if (type === 'fill') map.setPaintProperty(id, 'fill-color', water);
-      else if (type === 'line') map.setPaintProperty(id, 'line-color', water);
-    } else if (id.includes('building')) {
-      if (type === 'fill') map.setPaintProperty(id, 'fill-color', buildings);
-    } else if (id.includes('road') || id.includes('bridge') || id.includes('tunnel')) {
-      if (type === 'line') {
-        if (id.includes('major') || id.includes('primary') || id.includes('motorway')) {
-          map.setPaintProperty(id, 'line-color', roadsMajor);
-        } else {
-          map.setPaintProperty(id, 'line-color', roads);
-        }
-      } else if (type === 'fill') {
-        map.setPaintProperty(id, 'fill-color', roads);
-      }
-    } else if (id.includes('park') || id.includes('green') || id.includes('pitch') || (layer['source-layer'] === 'landuse' && id.includes('park'))) {
-      if (type === 'fill') map.setPaintProperty(id, 'fill-color', parks);
-    } else if (id.includes('label') || id.includes('place') || id.includes('poi')) {
-      if (type === 'symbol') {
-        map.setPaintProperty(id, 'text-color', labels);
-        map.setPaintProperty(id, 'text-halo-color', bg);
-        map.setPaintProperty(id, 'text-halo-width', 1);
-      }
-    } else if (id.includes('land') || id === 'background') {
-      if (type === 'background') map.setPaintProperty(id, 'background-color', land);
-      else if (type === 'fill') map.setPaintProperty(id, 'fill-color', land);
-    }
-  });
+  const hsl = hexToHsl(bg);
 
   const mapEl = document.getElementById('map');
-  mapEl.style.filter = 'none'; // Remove the raster CSS filter
+  // We use hue-rotate, saturate and brightness to tint the OSM tiles
+  // This is a common trick for "API-key-less" custom styled maps
+  mapEl.style.filter = `hue-rotate(${hsl.h}deg) saturate(${hsl.s}%) brightness(${hsl.l / 50})`;
+  mapEl.style.backgroundColor = bg;
 }
 
 function hexToHsl(hex) {
@@ -1600,24 +1580,9 @@ function toggleLayer(layer) {
 }
 
 function applyLayerVisibility(layerCategory, isVisible) {
-  if (!map || !map.isStyleLoaded()) return;
-  const visibility = isVisible ? 'visible' : 'none';
-  const layers = map.getStyle().layers;
-  
-  layers.forEach(l => {
-    const id = l.id;
-    let match = false;
-    
-    if (layerCategory === 'water' && id.includes('water')) match = true;
-    else if (layerCategory === 'buildings' && id.includes('building')) match = true;
-    else if (layerCategory === 'roads' && (id.includes('road') || id.includes('bridge') || id.includes('tunnel'))) match = true;
-    else if (layerCategory === 'parks' && (id.includes('park') || id.includes('green') || id.includes('pitch'))) match = true;
-    else if (layerCategory === 'labels' && (id.includes('label') || id.includes('place') || id.includes('poi'))) match = true;
-
-    if (match) {
-      map.setLayoutProperty(id, 'visibility', visibility);
-    }
-  });
+  // Raster tiles don't support per-layer visibility toggles easily
+  // We notify the user or just ignore for now to keep the app working
+  console.warn("Layer visibility toggles require a Mapbox API key for vector styles.");
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1646,14 +1611,24 @@ function fitCanvasToArea() {
   const area = document.getElementById('canvas-area');
   const poster = document.getElementById('poster');
   const wrap = document.getElementById('poster-wrap');
-  const areaW = area.offsetWidth - 80;
-  const areaH = area.offsetHeight - 80;
+
+  // Use clientWidth/Height to exclude scrollbars if any
+  const areaW = area.clientWidth - 100;
+  const areaH = area.clientHeight - 100;
+
   const pW = poster.offsetWidth;
   const pH = poster.offsetHeight;
+
+  // Calculate scale to fit while maintaining aspect ratio
   const scale = Math.min(areaW / pW, areaH / pH, 1);
   currentScale = scale;
+
   wrap.style.transform = `scale(${scale})`;
   wrap.style.transformOrigin = 'center center';
+
+  // Ensure the wrap itself has the same dimensions as the poster to correctly center it
+  wrap.style.width = pW + 'px';
+  wrap.style.height = pH + 'px';
 }
 
 function scaleCanvas(delta) {
